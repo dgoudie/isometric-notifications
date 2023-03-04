@@ -1,13 +1,10 @@
 package dev.goudie.isometric_notifications;
 
-import com.pusher.pushnotifications.PushNotifications;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -17,29 +14,28 @@ import java.util.concurrent.TimeUnit;
 @Service
 @Slf4j
 public class Handler {
-    private static final Long BREAK_TIME = Duration
-            .of(
-                    2,
-                    ChronoUnit.MINUTES
-            )
-            .toMillis();
     private static final Map<String, ScheduledFuture<?>> MAP = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorService;
-    private final PushNotifications pushNotifications;
+    private final RestTemplate pusherBeamsApiClient;
+    private final Long breakTimeInSeconds;
 
     public Handler(ScheduledExecutorService scheduledExecutorService,
-                   PushNotifications pushNotifications) {
+                   RestTemplate pusherBeamsApiClient,
+                   @Value("${break.time.in.seconds}") Long breakTimeInSeconds) {
         this.scheduledExecutorService = scheduledExecutorService;
-        this.pushNotifications = pushNotifications;
+        this.pusherBeamsApiClient = pusherBeamsApiClient;
+        this.breakTimeInSeconds = breakTimeInSeconds;
     }
+
 
     public void queueNotification(
             String userId
     ) {
+        clearNotification(userId);
         ScheduledFuture<?> scheduledFuture = scheduledExecutorService.schedule(
                 () -> sendNotification(userId),
-                BREAK_TIME,
-                TimeUnit.MILLISECONDS
+                breakTimeInSeconds,
+                TimeUnit.SECONDS
         );
         MAP.put(
                 userId,
@@ -59,80 +55,24 @@ public class Handler {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void sendNotification(String userId) {
-        Map<String, Map> publishRequest = new HashMap();
-
-        Map<String, String> apsAlert = new HashMap();
-        apsAlert.put(
-                "title",
-                "hello"
+        String jsonPayload = """
+                {
+                  "users": ["%s"],
+                  "web": {
+                    "notification": {
+                      "action": "Back to Workout",
+                      "body": "Time is up!",
+                      "icon": "https://isometric.goudie.dev/images/isometric.png",
+                      "hide_notification_if_site_has_focus": true,
+                      "vibrate": [200, 100, 200]
+                    }
+                  }
+                }
+                """.formatted(userId);
+        pusherBeamsApiClient.postForEntity(
+                "",
+                jsonPayload,
+                Void.class
         );
-        apsAlert.put(
-                "body",
-                "Hello world"
-        );
-        Map<String, Map> alert = new HashMap();
-        alert.put(
-                "alert",
-                apsAlert
-        );
-        Map<String, Map> aps = new HashMap();
-        aps.put(
-                "aps",
-                alert
-        );
-        publishRequest.put(
-                "apns",
-                aps
-        );
-
-        Map<String, String> fcmNotification = new HashMap();
-        fcmNotification.put(
-                "title",
-                "hello"
-        );
-        fcmNotification.put(
-                "body",
-                "Hello world"
-        );
-        Map<String, Map> fcm = new HashMap();
-        fcm.put(
-                "notification",
-                fcmNotification
-        );
-        publishRequest.put(
-                "fcm",
-                fcm
-        );
-
-        Map<String, String> webNotification = new HashMap();
-        webNotification.put(
-                "title",
-                "hello"
-        );
-        webNotification.put(
-                "body",
-                "Hello world"
-        );
-        Map<String, Map> web = new HashMap();
-        web.put(
-                "notification",
-                webNotification
-        );
-        publishRequest.put(
-                "web",
-                web
-        );
-
-        try {
-            pushNotifications.publishToUsers(
-                    Collections.singletonList(userId),
-                    publishRequest
-            );
-        } catch (Exception e) {
-            log.error(
-                    "And error occurred sending notifications",
-                    e
-            );
-        }
     }
 }
