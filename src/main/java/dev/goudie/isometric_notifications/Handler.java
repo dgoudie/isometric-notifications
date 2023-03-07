@@ -18,29 +18,26 @@ import java.util.concurrent.TimeUnit;
 public class Handler {
     private static final Map<String, ScheduledFuture<?>> MAP = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorService;
-    private final Long breakTimeInSeconds;
     private final PushHandler pushHandler;
     private PublicKey publicKey;
 
     public Handler(ScheduledExecutorService scheduledExecutorService,
-                   @Value("${break.time.in.seconds}") Long breakTimeInSeconds,
                    PushHandler pushHandler,
                    PublicKey publicKey) {
         this.scheduledExecutorService = scheduledExecutorService;
-        this.breakTimeInSeconds = breakTimeInSeconds;
         this.pushHandler = pushHandler;
         this.publicKey = publicKey;
     }
 
 
     public void queueNotification(
-            String userId
-    ) {
+            String userId,
+            long timeoutInMilliseconds) {
         clearNotification(userId);
         ScheduledFuture<?> scheduledFuture = scheduledExecutorService.schedule(
                 () -> pushHandler.sendNotification(userId),
-                breakTimeInSeconds,
-                TimeUnit.SECONDS
+                timeoutInMilliseconds,
+                TimeUnit.MILLISECONDS
         );
         MAP.put(
                 userId,

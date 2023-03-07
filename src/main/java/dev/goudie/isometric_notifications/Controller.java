@@ -18,10 +18,12 @@ public class Controller {
 
     @PostMapping(path = "queue_notification")
     public void queueNotification(
-            @RequestParam String user_id
+            @RequestParam String user_id,
+            @RequestParam long timeout_in_milliseconds
     ) {
         handler.queueNotification(
-                user_id
+                user_id,
+                timeout_in_milliseconds
         );
     }
 
