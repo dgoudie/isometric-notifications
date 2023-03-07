@@ -1,7 +1,4 @@
 FROM maven:3.9.0-eclipse-temurin-17-alpine as build
-ENV spring_profiles_active=prod
-ENV PUSHER_BEAMS_INSTANCE_ID=dummy
-ENV PUSHER_BEAMS_SECRET=dummy
 WORKDIR /workspace/app
 COPY pom.xml .
 COPY src src
