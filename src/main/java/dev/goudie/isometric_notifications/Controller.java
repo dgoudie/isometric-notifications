@@ -1,5 +1,8 @@
 package dev.goudie.isometric_notifications;
 
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,5 +32,10 @@ public class Controller {
         handler.clearNotification(
                 user_id
         );
+    }
+
+    @GetMapping(path = "vapid_public_key", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public byte[] getVapidPublicKey() {
+        return handler.getVapidPublicKey();
     }
 }

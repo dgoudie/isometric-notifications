@@ -1,14 +1,19 @@
 package dev.goudie.isometric_notifications;
 
-import dev.goudie.isometric_notifications.interceptor.PusherBeamsInterceptor;
 import lombok.extern.slf4j.Slf4j;
+import nl.martijndwars.webpush.PushService;
+import nl.martijndwars.webpush.Utils;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.DefaultUriBuilderFactory;
 
-import java.util.Collections;
+import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.PublicKey;
+import java.security.Security;
+import java.security.spec.InvalidKeySpecException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -16,33 +21,30 @@ import java.util.concurrent.ScheduledExecutorService;
 @Slf4j
 public class Config {
 
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
+
     @Bean
     public ScheduledExecutorService scheduledExecutorService() {
         return Executors.newScheduledThreadPool(10);
     }
 
     @Bean
-    public PusherBeamsInterceptor pusherBeamsInterceptor(
-            @Value("${pusher.beams.secret}") String secret
-    ) {
-        return new PusherBeamsInterceptor(secret);
+    public PublicKey publicKey(@Value("${vapid.public.key}") String vapidPublicKey) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+        return Utils.loadPublicKey(vapidPublicKey);
     }
 
     @Bean
-    public RestTemplate pusherBeamsApiClient(
-            @Value("${pusher.beams.instance.id}") String instanceId,
-            PusherBeamsInterceptor pusherBeamsInterceptor
-    ) {
-        RestTemplate restTemplate = new RestTemplate();
-        restTemplate.setUriTemplateHandler(
-                new DefaultUriBuilderFactory("https://%s.pushnotifications.pusher.com/publish_api/v1/instances/%s/publishes/users".formatted(
-                        instanceId,
-                        instanceId
-                ))
+    public PushService pushService(
+            @Value("${vapid.public.key}") String vapidPublicKey,
+            @Value("${vapid.private.key}") String vapidPrivatekey,
+            @Value("${jwt.subject}") String subject
+    ) throws GeneralSecurityException {
+        return new PushService(
+                vapidPublicKey,
+                vapidPrivatekey,
+                subject
         );
-        restTemplate.setInterceptors(
-                Collections.singletonList(pusherBeamsInterceptor)
-        );
-        return restTemplate;
     }
 }
