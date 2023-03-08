@@ -1,7 +1,7 @@
 package dev.goudie.isometric_notifications;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,7 +37,11 @@ public class Controller {
     }
 
     @GetMapping(path = "vapid_public_key", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public byte[] getVapidPublicKey() {
+    public byte[] getVapidPublicKey(HttpServletResponse httpServletResponse) {
+        httpServletResponse.setHeader(
+                "cache-control",
+                "s-maxage=1, stale-while-revalidate=599"
+        );
         return handler.getVapidPublicKey();
     }
 }
